@@ -7,13 +7,13 @@ def isSAT(dnfclause, sol):         # to fix clause and sol
     val = True
     # for lit in sol:
     #     if lit > 0:
-            
+
     #     if lit in dnfclause:
     return val
 
 
 def ComputeNumSamples(t, p):
-
+    # to use sampler
     return
 
 
@@ -50,15 +50,15 @@ solset = []
 
 
 for i in range(1, nClause):
-    
+
     currClause = lines[i].strip().split()
     clauseWidth = len(currClause)
     t = 2**(nVars-clauseWidth)
-    
+
     for s in solset:
         if isSAT(currClause, s):
             solset = solset.remove(s)
-    
+
     while p >= thresh / t:
         for sol in solset:
             if np.random.uniform(0,1) > 0.5 :
