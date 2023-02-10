@@ -19,9 +19,14 @@ def ComputeNumSamples(t, p):
 
 def GenerateSamples(N, Formula):
     sampSet = []
+
+    k = 0
+    for j in range(1, N)
+
     return sampSet
 
 
+def constructNewFile(currClause, )
 
 # file handling
 inputFile = "test.dnf"
@@ -75,7 +80,7 @@ for i in range(1, nClause):
         N_i = N_i / 2 # to change to Binomial (N_i, 1/2)
         p = p / 2
 
-    sol = GenerateSamples(N_i, currClause)
+    sol = GenerateSamples(N_i, currClause, delta, m)
     solset.append(sol)
 
 print(len(solset)/p)
