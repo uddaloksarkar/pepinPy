@@ -224,16 +224,16 @@ def dnfstream():
     for i in range(1, m):
 
         # print(i)
-        
+    
         currClause = lines[i].strip().split()[:-1]
         currClause = list(map(int, currClause))
         clauseWidth = len(currClause)
         t = mpfr(2**(n-clauseWidth))
-        
+    
         for s in solset:
             if isSAT(currClause, s):
                 solset.remove(s)
-        
+    
         while p >= thresh / t:
             for sol in solset:
                 if np.random.uniform(0,1) > 0.5 :
