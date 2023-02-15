@@ -5,6 +5,7 @@ import math
 import os, sys
 import random
 import time
+import argparse
 
 gp.get_context().precision=20000
 
@@ -54,7 +55,7 @@ def getSolutionFromVanillaSampler(dnfClause, nVars):
                 sol += '1'
     return sol
 
-
+"""
 def getSolutionFromSTS(dnfClauseFile, numSolutions):
     kValue = 50
     samplingRounds = int(numSolutions/kValue) + 1
@@ -148,7 +149,7 @@ def getSolutionFromQuickSampler(dnfClauseFile, numSolutions):
     os.unlink(dnfClauseFile+'.samples.valid')
 
     return solreturnList
-
+"""
 
 def GenerateSamples(N, dnfClause, delta, m, nVars):
     sampSet = []
@@ -192,8 +193,21 @@ def GenerateSamples(N, dnfClause, delta, m, nVars):
 
 def dnfstream():
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--eps", type=float, help="default = 0.8", default=0.8, dest="eps"
+    )
+    parser.add_argument(
+        "--delta", type=float, help="default = 0.36", default=0.36, dest="delta"
+    )
+    parser.add_argument("--seed", type=int, dest="seed", default=420)
+    # parser.add_argument("input", help="input file")
+
+    args = parser.parse_args()
+
     # file handling
-    inputFile = "test1.dnf"
+    inputFile = "test1.dnf" # args.input
     f = open(inputFile, "r")
     lines = f.readlines()
     f.close()
@@ -209,8 +223,8 @@ def dnfstream():
 
 
     # parameters / initialization
-    eps = 0.8
-    delta = 0.36
+    eps = args.eps
+    delta = args.delta
     m = int(nClause)
     n = int(nVars)
     thresh = max(12 * math.log(24/delta) / eps**2, 6*(math.log(6/delta) + math.log(m)))
@@ -240,6 +254,13 @@ def dnfstream():
                     solset.remove(sol)
             p = p / 2
 
+        # if p >= thresh / t:
+        #     pow = gp.ceil(gp.log2(p * t / thresh))
+        #     p = p / 2**pow
+        #     for sol in solset:
+        #             if np.random.uniform(0,1) > (1-p) :
+        #                 solset.remove(sol)
+
         N_i = ComputeNumSamples(t, p, thresh, m, delta)
 
 
@@ -247,7 +268,7 @@ def dnfstream():
             for sol in solset:
                 if np.random.uniform(0,1) > 0.5 :
                     solset.remove(sol)
-            N_i = N_i / 2 # to change to Binomial (N_i, 1/2)
+            N_i = np.random.binomial(N_i , 1/2)
             p = p / 2
 
         sol = GenerateSamples(N_i, currClause, delta, m, n)
