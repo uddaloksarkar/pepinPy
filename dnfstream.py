@@ -6,17 +6,20 @@ import os, sys
 import random
 import time
 import argparse
+import cProfile
 
 gp.get_context().precision=20000
 
 
 def isSAT(dnfclause, sol):         
     for lit in dnfclause:
-        if sol[lit-1] == '0':
+        if -1 * lit in sol :
             return False
+        elif lit not in sol:
+            if np.random.uniform(0,1) > 0.5:        # delayed sample generation
+                return False
     return True
     
-
 
 
 def ComputeNumSamples(t, p, thresh, m, delta):
@@ -41,18 +44,17 @@ def ComputeNumSamples(t, p, thresh, m, delta):
 
 
 
-
 def getSolutionFromVanillaSampler(dnfClause, nVars):
-    sol = ''
+    sol = []
     tmpRand = np.random.uniform(0,1,nVars)
     for i in range(1, nVars+1):
         if i in dnfClause:
-            sol += '1'
+            sol.append(i)
         else:
             if tmpRand[i-1] > 0.5:
-                sol += '0'
+                sol.append(-i)
             else:
-                sol += '1'
+                sol.append(i)
     return sol
 
 """
@@ -151,39 +153,52 @@ def getSolutionFromQuickSampler(dnfClauseFile, numSolutions):
     return solreturnList
 """
 
-def GenerateSamples(N, dnfClause, delta, m, nVars):
+def constructLazySample(dnfClause):
+    # sol = []
+    # for lit in dnfClause:
+    #     sol.append(lit)
+    return dnfClause
+
+
+def GenerateSamples(N, dnfClause, delta, m, nVars, thresh):
     sampSet = []
 
-    tmpFile = open("tmpClause.cnf", 'w')
-    tmpFile.write('p cnf ' + str(nVars) + ' ' + str(len(dnfClause)) + '\n')
-    varstr = 'c ind '
-    for i in range(1, nVars+1):
-        varstr += str(i) + ' '
-        if i % 10 == 0 and i < nVars:
-            varstr += '0\nc ind '
-    tmpFile.write(varstr)
-    tmpFile.write('0\n')
-    # clauseStr = ''
-    for lit in dnfClause:
-        tmpFile.write(str(lit) + ' 0\n')
-        # clauseStr += str(lit) + ' 0\n'
-    # tmpFile.write(clauseStr)
-    tmpFile.close()
+    # tmpFile = open("tmpClause.cnf", 'w')
+    # tmpFile.write('p cnf ' + str(nVars) + ' ' + str(len(dnfClause)) + '\n')
+    # varstr = 'c ind '
+    # for i in range(1, nVars+1):
+    #     varstr += str(i) + ' '
+    #     if i % 10 == 0 and i < nVars:
+    #         varstr += '0\nc ind '
+    # tmpFile.write(varstr)
+    # tmpFile.write('0\n')
+    # # clauseStr = ''
+    # for lit in dnfClause:
+    #     tmpFile.write(str(lit) + ' 0\n')
+    #     # clauseStr += str(lit) + ' 0\n'
+    # # tmpFile.write(clauseStr)
+    # tmpFile.close()
 
-    if N > 0 :
-        k = 0
-        lmt = int(N * (math.log(N) + math.log(6/delta) + math.log(m)))
-        for j in range(int(lmt)):
-            s = getSolutionFromVanillaSampler(dnfClause, nVars)
-            if s not in sampSet:
-                sampSet.append(s)
-                k += 1
-            if k == N: break
-
-        # s = getSolutionFromSTS("tmpClause.cnf", lmt)
-        
-        # s = getSolutionFromQuickSampler("tmpClause.cnf", lmt)
+    if nVars - len(dnfClause) - 2 * math.log2(1+thresh) <= math.log2(6*m/delta):
             
+
+        if N > 0 :
+            k = 0
+            lmt = int(N * (math.log(N) + math.log(6/delta) + math.log(m)))
+            for j in range(int(lmt)):
+                s = getSolutionFromVanillaSampler(dnfClause, nVars)
+                if s not in sampSet:
+                    sampSet.append(s)
+                    k += 1
+                if k == N: break
+
+            # s = getSolutionFromSTS("tmpClause.cnf", lmt)
+            
+            # s = getSolutionFromQuickSampler("tmpClause.cnf", lmt)
+            
+    else:
+        for j in range(N):
+            sampSet.append(constructLazySample(dnfClause))
 
     return sampSet
 
@@ -207,7 +222,7 @@ def dnfstream():
     args = parser.parse_args()
 
     # file handling
-    inputFile = "test1.dnf" # args.input
+    inputFile = "test3.dnf" # args.input
     f = open(inputFile, "r")
     lines = f.readlines()
     f.close()
@@ -248,21 +263,17 @@ def dnfstream():
             if isSAT(currClause, s):
                 solset.remove(s)
     
+        if i == 1 and p >= thresh / t:
+            pow = gp.ceil(gp.log2(p * t / thresh))
+            p = p / 2**pow
+
         while p >= thresh / t:
             for sol in solset:
                 if np.random.uniform(0,1) > 0.5 :
                     solset.remove(sol)
             p = p / 2
 
-        # if p >= thresh / t:
-        #     pow = gp.ceil(gp.log2(p * t / thresh))
-        #     p = p / 2**pow
-        #     for sol in solset:
-        #             if np.random.uniform(0,1) > (1-p) :
-        #                 solset.remove(sol)
-
         N_i = ComputeNumSamples(t, p, thresh, m, delta)
-
 
         while N_i + len(solset) > thresh:
             for sol in solset:
@@ -271,7 +282,7 @@ def dnfstream():
             N_i = np.random.binomial(N_i , 1/2)
             p = p / 2
 
-        sol = GenerateSamples(N_i, currClause, delta, m, n)
+        sol = GenerateSamples(N_i, currClause, delta, m, n, thresh)
         solset += sol
 
     modelCount = int(len(solset)/p)
