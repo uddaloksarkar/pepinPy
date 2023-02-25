@@ -1,0 +1,84 @@
+Starting DNFCUSP at Fri Feb 24 15:24:23 2023
+
+DNFCUSP invoked with epsilon=0.8 delta=0.36 searchMode=0 timeout=0 logFile=./logfile.log dnfFile=../test1.dnf seed=-1
+Using pivot = 72 tApproxMC = 1
+
+Successfully parsed dimacs dnfFile ../test1.dnf
+Starting DNFCUSP..
+
+StartIteration in constructor:34950
+endIteration in constructor:34995
+Starting search. pivot,tApproxMC,searchMode = 72 1 0 seed=-1
+Using start iteration 34950
+
+Hash initialized
+ApproxMC: j=0 tApproxMC = 1
+-> Hash Count 34950
+BoundedSATCount looking for 73 solutions. Checking existing 0 solutions..inited so resetting doneCubes and clearing solutions!
+ currently have 0 cubes done : 1
+addhash currHashCount:34950 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34951
+BoundedSATCount looking for 73 solutions. Checking existing 0 solutions.. currently have 0 cubes done : 1
+addhash currHashCount:34951 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34952
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 37 cubes done : 2
+addhash currHashCount:34952 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34953
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 38 cubes done : 3
+addhash currHashCount:34953 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34954
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 37 cubes done : 5
+addhash currHashCount:34954 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34955
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 37 cubes done : 11
+addhash currHashCount:34955 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34956
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 33 cubes done : 20
+addhash currHashCount:34956 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34957
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 36 cubes done : 37
+addhash currHashCount:34957 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34958
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 36 cubes done : 84
+addhash currHashCount:34958 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34959
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 36 cubes done : 167
+addhash currHashCount:34959 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34960
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 45 cubes done : 336
+addhash currHashCount:34960 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34961
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 36 cubes done : 629
+addhash currHashCount:34961 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34962
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 34 cubes done : 1191
+addhash currHashCount:34962 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34963
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 34 cubes done : 2873
+addhash currHashCount:34963 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34964
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 40 cubes done : 6011
+addhash currHashCount:34964 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34965
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 31 cubes done : 9270
+addhash currHashCount:34965 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34966
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 35 cubes done : 18013
+addhash currHashCount:34966 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34967
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 42 cubes done : 37524
+addhash currHashCount:34967 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34968
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 32 cubes done : 69972
+addhash currHashCount:34968 num_xorcls:1 startiter:34950 maxhashcunt:35000
+-> Hash Count 34969
+BoundedSATCount looking for 73 solutions. Checking existing 74 solutions.. currently have 37 cubes done : 140957
+
+
+Number of solutions is: 66 x 2^34969
+DNFCUSP took 41.6061 seconds 
+
+
+DNFCUSP ended at Fri Feb 24 15:25:08 2023
+
+Closed cusplog
