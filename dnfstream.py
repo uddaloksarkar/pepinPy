@@ -11,13 +11,16 @@ import cProfile
 gp.get_context().precision=20000
 
 
-def isSAT(dnfclause, sol):         
+def isSAT(dnfclause, sol):    
+    tmpRand = np.random.uniform(0, 1, max(len(dnfclause), len(sol)))     
+    idx = 0
     for lit in dnfclause:
         if -1 * lit in sol :
             return False
         elif lit not in sol:
-            if np.random.uniform(0,1) > 0.5:        # delayed sample generation
+            if tmpRand[idx] > 0.5:    # np.random.uniform(0, 1)    # delayed sample generation
                 return False
+            idx += 1
     return True
     
 
@@ -217,12 +220,12 @@ def dnfstream():
         "--delta", type=float, help="default = 0.36", default=0.36, dest="delta"
     )
     parser.add_argument("--seed", type=int, dest="seed", default=420)
-    # parser.add_argument("input", help="input file")
+    parser.add_argument("input", help="input file")
 
     args = parser.parse_args()
 
     # file handling
-    inputFile = "test3.dnf" # args.input
+    inputFile = args.input #"test4.dnf" # args.input
     f = open(inputFile, "r")
     lines = f.readlines()
     f.close()
