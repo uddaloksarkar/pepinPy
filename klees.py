@@ -1,5 +1,5 @@
 import gmpy2 as gp
-from gmpy2 import mpq, mpfr
+from gmpy2 import mpz, mpq, mpfr
 import numpy as np
 import math
 import os, sys
@@ -12,17 +12,16 @@ from mprandom import mpbinomial
 gp.get_context().precision=20000
 
 
-def isSAT(dnfclause, sol):    
-    tmpRand = np.random.uniform(0, 1, max(len(dnfclause), len(sol)))     
-    idx = 0
-    for lit in dnfclause:
-        if -1 * lit in sol :
-            return False
-        elif lit not in sol:
-            if tmpRand[idx] > 0.5:    # np.random.uniform(0, 1)    # delayed sample generation
-                return False
-            idx += 1
-    return True
+def isSAT(Box, sol):
+    
+    b = True
+    for dim in range(len(sol)):
+        interval = sol[dim]
+        ptDim = np.random.uniform(interval[0], interval[1])
+        if ptDim > Box[dim][1] or ptDim < Box[dim][0]:
+            b *= False
+
+    return b
     
 
 
@@ -79,101 +78,7 @@ def getSolutionFromVanillaSampler(dnfClause, nVars):
                 sol.append(i)
     return sol
 
-"""
-def getSolutionFromSTS(dnfClauseFile, numSolutions):
-    kValue = 50
-    samplingRounds = int(numSolutions/kValue) + 1
-    outputFile = "tmpSTSoutput.out"
-    cmd = './samplers/STS -k='+str(kValue)+' -nsamples='+str(samplingRounds)+' '+str(dnfClauseFile)
-    cmd += ' > '+str(outputFile)
-    os.system(cmd)
 
-    with open(outputFile, 'r') as f:
-        lines = f.readlines()
-
-    solList = []
-    shouldStart = False
-    for j in range(len(lines)):
-        if(lines[j].strip() == 'Outputting samples:' or lines[j].strip() == 'start'):
-            shouldStart = True
-            continue
-        if (lines[j].strip().startswith('Log') or lines[j].strip() == 'end'):
-            shouldStart = False
-        if (shouldStart):
-            i = 0
-            sol = []
-            # valutions are 0 and 1 and in the same order as c ind.
-            for x in list(lines[j].strip()):
-                if (x == '0'):
-                    sol.append(-1*indVarList[i])
-                else:
-                    sol.append(indVarList[i])
-                i += 1
-            solList.append(sol)
-
-    solreturnList = solList
-    if len(solList) > numSolutions:
-        solreturnList = random.sample(solList, numSolutions)
-    elif len(solList) < numSolutions:
-        print(len(solList))
-        print("STS Did not find required number of solutions")
-        sys.exit(1)
-
-    os.unlink(outputFile)
-    return solreturnList
-
-
-
-def getSolutionFromQuickSampler(dnfClauseFile, numSolutions):
-    cmd = (
-        "./samplers/quicksampler -n "
-        + str(numSolutions * 5)
-        + " "
-        + str(dnfClauseFile)
-        )
-    print(cmd)
-    os.system(cmd)
-    cmd = "./samplers/z3 " + str(dnfClauseFile) #+ " > /dev/null 2>&1"
-    print(cmd)
-    os.system(cmd)
-    i = 0
-    if numSolutions > 1:
-        i = 0
-
-    f = open(dnfClauseFile + ".samples", "r")
-    lines = f.readlines()
-    f.close()
-    f = open(dnfClauseFile + ".samples.valid", "r")
-    validLines = f.readlines()
-    f.close()
-    solList = []
-    for j in range(len(lines)):
-        # if validLines[j].strip() == "0":
-        #     continue
-        fields = lines[j].strip().split(":")
-        solList.append(fields[1])
-        # sol = []
-        # i = 0
-        # for x in list(fields[1].strip()):
-        #     if x == "0":
-        #         sol.append(-1*indVarList[i])
-        #     else:
-        #         sol.append(indVarList[i])
-        #     i += 1
-        # solList.append(sol)
-
-    solreturnList = solList
-    if len(solList) > numSolutions:
-        solreturnList = random.sample(solList, numSolutions)
-    elif len(solreturnList) < numSolutions:
-        print("Did not find required number of solutions")
-        exit(1)
-
-    os.unlink(dnfClauseFile+'.samples')
-    os.unlink(dnfClauseFile+'.samples.valid')
-
-    return solreturnList
-"""
 
 def constructLazySample(dnfClause):
     # sol = []
@@ -225,6 +130,24 @@ def GenerateSamples(N, dnfClause, delta, m, nVars, thresh):
     return sampSet
 
 
+def parseInput(inputFile):
+    f = open(inputFile, 'r')
+    lines = f.readlines()
+    f.close()
+    for line in lines:
+        if line.startswith('c dim'):
+            ndim = line.strip().split()[-1]
+        if line.startswith('c nbox'):
+            nbox = line.strip().split()[-1]
+    return ndim, nbox
+
+
+def calculateVolume(box):
+    volume = mpfr('1')
+    for interval in box:
+        volume = gp.mul(volume, (interval[1] - interval[0]))
+    return volume
+
 
 
 
@@ -255,21 +178,17 @@ def dnfstream():
 
     np.random.seed(seed)
 
-    initLine = lines[0].strip().split()
 
+    ndim, nbox = parseInput(inputFile)
 
-    if initLine[0] == "p":
-        nVars = initLine[2]
-        nClause = initLine[3]
-
-    print(nVars, nClause)
+    print(ndim, nbox)
 
 
     # parameters / initialization
     eps = args.eps
     delta = args.delta
-    m = int(nClause)
-    n = int(nVars)
+    m = int(nbox)
+    ndim = int(ndim)
     thresh = max(12 * math.log(24/delta) / eps**2, 6*(math.log(6/delta) + math.log(m)))
     # thresh = 4*math.log2(m+1)/(eps**2)*math.log2(1.0/delta) 
     p = 1
@@ -285,16 +204,27 @@ def dnfstream():
         if lines[line].startswith("c") or lines[line].startswith("p") or lines[line].startswith("w"):
             line += 1
             continue 
-        currClause = lines[line].strip().split()[:-1]
+        currBox = lines[line].strip().split()
         line += 1
-        currClause = list(map(int, currClause))
-        clauseWidth = len(currClause)
+        currBox = list(map(float, currBox))
 
-        print(f"adding clause {currClause}")
-        t = mpfr(2**(n-clauseWidth))
+        tmpBox = []
+        count = 0
+
+        assert(len(currBox)%2 == 0)
+
+        while count < len(currBox):
+            tmpBox.append([currBox[count], currBox[count + 1]])
+            count += 2
+        currBox = tmpBox
+        print(f"adding box {currBox}")
+
+        t = calculateVolume(currBox)
+
+        t = mpz(t)  # for binomial sampling
     
         for s in solset:
-            if isSAT(currClause, s):
+            if isSAT(currBox, s):
                 solset.remove(s)
     
         if cl == 1 and p >= thresh / t:
@@ -324,7 +254,7 @@ def dnfstream():
 
         print(f"old ni : {Npast}, new ni: {N_i}")
 
-        sol = GenerateSamples(N_i, currClause, delta, m, n, thresh)
+        sol = GenerateSamples(N_i, currBox, delta, m, ndim, thresh) # ndim just a placeholder :: not in work
         solset += sol
         cl += 1
         if cl == m : break
