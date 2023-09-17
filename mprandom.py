@@ -1,6 +1,6 @@
 from random import *
 import decimal
-from decimal import Decimal, Context, getcontext
+from decimal import Decimal, Context, getcontext, setcontext, MAX_PREC, MAX_EMAX, MIN_EMIN
 from operator import index as _index
 from math import log2 as _log2, log10 as _log10, fabs as _fabs, lgamma as _lgamma, log as _log, floor as _floor
 from math import sqrt as _sqrt, exp as _exp
@@ -291,90 +291,101 @@ def binomialvariate(n=1, p=0.5):
             # print("after")
             return k
 
-#def vanbinomialvariate(n=1, p=0.5):
-#        """Binomial random variable.
+def vanbinomialvariate(n=1, p=0.5):
+       """Binomial random variable.
 
-#        Gives the number of successes for *n* independent trials
-#        with the probability of success in each trial being *p*:
+       Gives the number of successes for *n* independent trials
+       with the probability of success in each trial being *p*:
 
-#            sum(random() < p for i in range(n))
+           sum(random() < p for i in range(n))
 
-#        Returns an integer in the range:   0 <= X <= n
+       Returns an integer in the range:   0 <= X <= n
 
-#        """
-#        context = Context(prec=30)
-#        p = Decimal(p)
-#        # Error check inputs and handle edge cases
-#        if n < 0:
-#            raise ValueError("n must be non-negative")
-#        if p <= 0.0 or p >= 1.0:
-#            if p == 0.0:
-#                return 0
-#            if p == 1.0:
-#                return n
-#            raise ValueError("p must be in the range 0.0 <= p <= 1.0")
+       """
+    #    context = Context(prec=300, Emax=MAX_EMAX, Emin=MIN_EMIN)
+    #    setcontext(context)
+       context = Context(prec=300)
+       setcontext(context)
+       p = Decimal(p)
+       # Error check inputs and handle edge cases
+       if n < 0:
+           raise ValueError("n must be non-negative")
+       if p <= 0.0 or p >= 1.0:
+           if p == 0.0:
+               return 0
+           if p == 1.0:
+               return n
+           raise ValueError("p must be in the range 0.0 <= p <= 1.0")
 
-##        random = self.random
+#        random = self.random
 
-##        # Fast path for a common case
-##        if n == 1:
-##            return _index(random() < p)
+#        # Fast path for a common case
+#        if n == 1:
+#            return _index(random() < p)
 
-#        # Exploit symmetry to establish:  p <= 0.5
-#        if p > 0.5:
-#            return n - self.binomialvariate(n, 1.0 - p)
+       # Exploit symmetry to establish:  p <= 0.5
+       if p > 0.5:
+           return n - vanbinomialvariate(n, 1.0 - p)
 
-#        if n * p < 10.0:
-#            # BG: Geometric method by Devroye with running time of O(np).
-#            # https://dl.acm.org/doi/pdf/10.1145/42372.42381
-#            x = y = 0
-#            c = _log2(1 - p)
-#            if not c:
-#                return x
-#            while True:
-#                y += int(_log2(random()) / c) + 1
-#                if y > n:
-#                    return x
-#                x += 1
+       if n * p < 10.0:
+           # BG: Geometric method by Devroye with running time of O(np).
+           # https://dl.acm.org/doi/pdf/10.1145/42372.42381
+           x = y = 0
+           c = _log2(1 - p)
+           if not c:
+               return x
+           while True:
+               y += int(_log2(random()) / c) + 1
+               if y > n:
+                   return x
+               x += 1
 
-#        # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
-#        # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
-#        assert n*p >= 10.0 and p <= 0.5
-#        setup_complete = False
+       # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
+       # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
+       assert n*p >= 10.0 and p <= 0.5
+       setup_complete = False
 
-#        spq = context.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
-#        b = Decimal(1.15) + Decimal(2.53) * spq
-#        a = Decimal(-0.0873) + Decimal(0.0248) * b + Decimal(0.01) * p
-#        c = context.fma(n, p , Decimal(0.5))
-#        vr = Decimal(0.92 - 4.2) / b
+       spq = context.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
+       b = Decimal(1.15) + Decimal(2.53) * spq
+       a = Decimal(-0.0873) + Decimal(0.0248) * b + Decimal(0.01) * p
+       c = context.fma(n, p , Decimal(0.5))
+       vr = Decimal(0.92 - 4.2) / b
 
-#        while True:
+       while True:
 
-#            u = random()
-#            u -= 0.5
-#            us = 0.5 - _fabs(u)
-#            k = int((2 * a / Decimal(us) + b) * Decimal(u) + c)
-#            if k < 0 or k > n:
-#                continue
+           u = random()
+           u -= 0.5
+           us = 0.5 - _fabs(u)
+           k = int((2 * a / Decimal(us) + b) * Decimal(u) + c)
+           print(f"k:{k}")
+           if k < 0 or k > n:
+               continue
 
-#            # The early-out "squeeze" test substantially reduces
-#            # the number of acceptance condition evaluations.
-#            v = Decimal(random())
-#            if us >= 0.07 and v <= vr:
-#                return k
+           # The early-out "squeeze" test substantially reduces
+           # the number of acceptance condition evaluations.
+           v = Decimal(random())
+           if us >= 0.07 and v <= vr:
+               return k
+           
+        #    print(us)
 
-#            # Acceptance-rejection test.
-#            # Note, the original paper errorneously omits the call to log(v)
-#            # when comparing to the log of the rescaled binomial distribution.
-#            if not setup_complete:
-#                alpha = (Decimal(2.83) + Decimal(5.1) / b) * Decimal(spq)
-#                lpq = _log(p / (1 - p))
-#                m = _floor((n + 1) * p)         # Mode of the distribution
-#                h = _lgamma(Decimal(m + 1)) + _lgamma(Decimal(n - m + 1))
-#                setup_complete = True           # Only needs to be done once
-#            v *= alpha / (a / Decimal(us * us) + b)
-#            if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
-#                return k
+           # Acceptance-rejection test.
+           # Note, the original paper errorneously omits the call to log(v)
+           # when comparing to the log of the rescaled binomial distribution.
+           if not setup_complete:
+               alpha = (Decimal(2.83) + Decimal(5.1) / b) * Decimal(spq)
+               lpq = _log(p / (1 - p))
+               m = _floor((n + 1) * p)         # Mode of the distribution
+               h = _lgamma(Decimal(m + 1)) + _lgamma(Decimal(n - m + 1))
+               setup_complete = True           # Only needs to be done once
+           v *= alpha / (a / Decimal(us * us) + b)
+        #    print(f"setup:- b:{b}, spq:{spq}, alph:{alpha}, lpq:{lpq}, m:{m}, h:{h}")
+        #    print(f"us : {us}, a:{a}, v:{v}, _log(v):{_log(v)}")
+        #    print(f"k:{k}, lgamma(k):{_lgamma(k+1)}")
+        #    print("the cond:", h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m))
+        #    print("*lpq:==>", h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq)
+           if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
+               return k
 
 
 if __name__ == '__main__':
