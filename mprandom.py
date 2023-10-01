@@ -309,12 +309,12 @@ def vanbinomialvariate(n=1, p=0.5):
 
        """
        start = time.time()
-    #    context = Context(prec=300, Emax=MAX_EMAX, Emin=MIN_EMIN)
+    #    context = Context(prec=3000)
     #    setcontext(context)
-       context = Context(prec=3000)
-       setcontext(context)
-       p = context.create_decimal(str(p))
-       n = context.create_decimal(str(n))
+    #    p = context.create_decimal(str(p))
+    #    n = context.create_decimal(str(n))
+       gp.set_context(gp.context(precision = 3000))
+       p, n = gp.mpfr(str(p)), gp.mpfr(str(n))
     #    p = Decimal(p)
        # Error check inputs and handle edge cases
        if n < 0:
@@ -354,11 +354,18 @@ def vanbinomialvariate(n=1, p=0.5):
        assert n*p >= 10.0 and p <= 0.5
        setup_complete = False
 
-       spq = context.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
-       b = Decimal(1.15) + Decimal(2.53) * spq
-       a = Decimal(-0.0873) + Decimal(0.0248) * b + Decimal(0.01) * p
-       c = context.fma(n, p , Decimal(0.5))
-       vr = Decimal(0.92 - 4.2) / b
+    #    spq = context.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
+    #    b = Decimal(1.15) + Decimal(2.53) * spq
+    #    a = Decimal(-0.0873) + Decimal(0.0248) * b + Decimal(0.01) * p
+    #    c = context.fma(n, p , Decimal(0.5))
+    #    vr = Decimal(0.92 - 4.2) / b
+
+       spq = gp.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
+       b = gp.mpfr('1.15') + gp.mpfr('2.53') * spq
+       a = gp.mpfr('-0.0873') + gp.mpfr('0.0248') * b + gp.mpfr('0.01') * p
+       c = n * p + gp.mpfr('0.5')
+       vr = gp.mpfr(str(0.92 - 4.2)) / b
+
 
     #    print(f"spq : {spq}, b : {b}, a : {a}, c : {c}, vr : {vr}")
 
@@ -367,14 +374,14 @@ def vanbinomialvariate(n=1, p=0.5):
            u = random()
            u -= 0.5
            us = 0.5 - _fabs(u)
-           k = int((2 * a / Decimal(us) + b) * Decimal(u) + c)
+           k = int((2 * a / gp.mpfr(us) + b) * gp.mpfr(u) + c)
         #    print(f"k:{k}")
            if k < 0 or k > n:
                continue
 
            # The early-out "squeeze" test substantially reduces
            # the number of acceptance condition evaluations.
-           v = Decimal(random())
+           v = gp.mpfr(random())
            if us >= 0.07 and v <= vr:
                return k
            
@@ -384,24 +391,19 @@ def vanbinomialvariate(n=1, p=0.5):
            # Note, the original paper errorneously omits the call to log(v)
            # when comparing to the log of the rescaled binomial distribution.
            if not setup_complete:
-               gp.set_context(gp.context(precision = 10000))
-               alpha = (Decimal(2.83) + Decimal(5.1) / b) * Decimal(spq)
+            #    gp.set_context(gp.context(precision = 10000))
+               alpha = (gp.mpfr('2.83') + gp.mpfr('5.1') / b) * gp.mpfr(spq)
                ratio = p / (1 - p)
-               lpq = Decimal(str(gp.log2(gp.mpfr(str(ratio))))) * Decimal(_log(2))
+               lpq = gp.log2(gp.mpfr(str(ratio))) * gp.mpfr(_log(2))      # mpfr log
             #    lpq = ratio.log10() * Decimal(_log(10))    # decimal log
                m = _floor((n + 1) * p)         # Mode of the distribution
                h1 = gp.mpfr(str(m + 1)); h2 = gp.mpfr(str(n - m + 1))
                h = gp.lgamma(h1)[0] + gp.lgamma(h2)[0]
                setup_complete = True           # Only needs to be done once
-           v *= alpha / (a / Decimal(us * us) + b)
-        #    print(f"setup:- b:{b}, spq:{spq}, alph:{alpha}, lpq:{lpq}, m:{m}, h:{h}")
-        #    print(f"us : {us}, a:{a}, v:{v}, _log(v):{_log(v)}")
-        #    print(f"k:{k}, lgamma(k):{_lgamma(k+1)}")
-        #    print("the cond:", h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m))
-        #    print("*lpq:==>", h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq)
-           a1 = Decimal(str(gp.log2(gp.mpfr(str(v))))) * Decimal(_log(2))
+           v *= alpha / (a / us * us + b)
+           a1 = gp.log2(gp.mpfr(str(v))) * gp.mpfr(_log(2))       # mpfr log
         #    a1 = v.log10() * Decimal(_log(10))     # decimal log
-           a2 = Decimal(str(gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))))
+           a2 = gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))
         #    if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
            if a1 <= a2 + (k - m) * lpq:
                print("time taken : ", time.time() - start)
@@ -412,7 +414,8 @@ if __name__ == '__main__':
     context = Context(prec=3000)
     setcontext(context)
     p = Decimal(1)
-    for i in range(5000):
+    for i in range(5):
         p /= 2
-    N = Decimal(2**7000)
+    N = Decimal(2**7)
     print(vanbinomialvariate(N,p))
+    # print(mpbinomial(N,p))
