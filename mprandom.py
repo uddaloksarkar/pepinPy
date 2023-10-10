@@ -298,124 +298,107 @@ def binomialvariate(n=1, p=0.5):
             return k
 
 def vanbinomialvariate(n=1, p=0.5):
-       """Binomial random variable.
+        """Binomial random variable.
 
-       Gives the number of successes for *n* independent trials
-       with the probability of success in each trial being *p*:
+        Gives the number of successes for *n* independent trials
+        with the probability of success in each trial being *p*:
 
-           sum(random() < p for i in range(n))
+            sum(random() < p for i in range(n))
 
-       Returns an integer in the range:   0 <= X <= n
+        Returns an integer in the range:   0 <= X <= n
 
-       """
-       start = time.time()
-    #    context = Context(prec=3000)
-    #    setcontext(context)
-    #    p = context.create_decimal(str(p))
-    #    n = context.create_decimal(str(n))
-       gp.set_context(gp.context(precision = 3000))
-       p, n = gp.mpfr(str(p)), gp.mpfr(str(n))
-    #    p = Decimal(p)
-       # Error check inputs and handle edge cases
-       if n < 0:
-           raise ValueError("n must be non-negative")
-       if p <= 0.0 or p >= 1.0:
-           if p == 0.0:
-               return 0
-           if p == 1.0:
-               return n
-           raise ValueError("p must be in the range 0.0 <= p <= 1.0")
+        """
+        start = time.time()
+        gp.set_context(gp.context(precision = 3000))
+        p, n = gp.mpfr(str(p)), gp.mpfr(str(n))
+        
+        # Error check inputs and handle edge cases
+        if n < 0:
+            raise ValueError("n must be non-negative")
+        if p <= 0.0 or p >= 1.0:
+            if p == 0.0:
+                return 0
+            if p == 1.0:
+                return n
+            raise ValueError("p must be in the range 0.0 <= p <= 1.0")
 
-#        random = self.random
+        # Exploit symmetry to establish:  p <= 0.5
+        if p > 0.5:
+            return n - vanbinomialvariate(n, 1.0 - p)
 
-#        # Fast path for a common case
-#        if n == 1:
-#            return _index(random() < p)
+        if n * p < 10.0:
+            # BG: Geometric method by Devroye with running time of O(np).
+            # https://dl.acm.org/doi/pdf/10.1145/42372.42381
+            x = y = 0
+            c = gp.log2(1 - p)
+            if not c:
+                return x
+            while True: 
+                y += int(gp.mpfr(str(_log2(random()))) / c) + 1
+                if y > n:
+                    return x
+                x += 1
 
-       # Exploit symmetry to establish:  p <= 0.5
-       if p > 0.5:
-           return n - vanbinomialvariate(n, 1.0 - p)
+        # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
+        # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
+        assert n*p >= 10.0 and p <= 0.5
+        setup_complete = False
 
-       if n * p < 10.0:
-           # BG: Geometric method by Devroye with running time of O(np).
-           # https://dl.acm.org/doi/pdf/10.1145/42372.42381
-           x = y = 0
-           c = _log2(1 - p)
-           if not c:
-               return x
-           while True:
-               y += int(_log2(random()) / c) + 1
-               if y > n:
-                   return x
-               x += 1
-
-       # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
-       # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
-       assert n*p >= 10.0 and p <= 0.5
-       setup_complete = False
-
-    #    spq = context.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
-    #    b = Decimal(1.15) + Decimal(2.53) * spq
-    #    a = Decimal(-0.0873) + Decimal(0.0248) * b + Decimal(0.01) * p
-    #    c = context.fma(n, p , Decimal(0.5))
-    #    vr = Decimal(0.92 - 4.2) / b
-
-       spq = gp.sqrt(n * p * (1 - p))  # Standard deviation of the distribution
-       b = gp.mpfr('1.15') + gp.mpfr('2.53') * spq
-       a = gp.mpfr('-0.0873') + gp.mpfr('0.0248') * b + gp.mpfr('0.01') * p
-       c = n * p + gp.mpfr('0.5')
-       vr = gp.mpfr(str(0.92 - 4.2)) / b
+        spq = gp.sqrt(gp.mul(gp.mul(n, p), (1 - p)))  # Standard deviation of the distribution
+        b = gp.add(gp.mpfr('1.15'),  gp.mul(gp.mpfr('2.53'), spq))
+        a = gp.add(gp.add(gp.mpfr('-0.0873'), gp.mul(gp.mpfr('0.0248'), b)), gp.mul(gp.mpfr('0.01'), p))
+        c = gp.add(gp.mul(n, p), gp.mpfr('0.5'))
+        vr = gp.sub(gp.mpfr('0.92'), gp.div(gp.mpfr('4.2'), b))
 
 
-    #    print(f"spq : {spq}, b : {b}, a : {a}, c : {c}, vr : {vr}")
+        while True:
 
-       while True:
+            u = random()
+            u -= 0.5
+            us = 0.5 - _fabs(u)
+            k = int(gp.mul(gp.add(gp.div(gp.mul(2, a), gp.mpfr(str(us))), b), gp.mpfr(str(u))) + c)
+            #    print(f"k:{k}")
+            if k < 0 or k > n:
+                continue
 
-           u = random()
-           u -= 0.5
-           us = 0.5 - _fabs(u)
-           k = int((2 * a / gp.mpfr(us) + b) * gp.mpfr(u) + c)
-        #    print(f"k:{k}")
-           if k < 0 or k > n:
-               continue
+            # The early-out "squeeze" test substantially reduces
+            # the number of acceptance condition evaluations.
+            v = gp.mpfr(random())
+            if us >= 0.07 and v <= vr:
+                return k
+            
+            #    print(f"u : {u}, us : {us}")
 
-           # The early-out "squeeze" test substantially reduces
-           # the number of acceptance condition evaluations.
-           v = gp.mpfr(random())
-           if us >= 0.07 and v <= vr:
-               return k
-           
-        #    print(f"u : {u}, us : {us}")
-
-           # Acceptance-rejection test.
-           # Note, the original paper errorneously omits the call to log(v)
-           # when comparing to the log of the rescaled binomial distribution.
-           if not setup_complete:
-            #    gp.set_context(gp.context(precision = 10000))
-               alpha = (gp.mpfr('2.83') + gp.mpfr('5.1') / b) * gp.mpfr(spq)
-               ratio = p / (1 - p)
-               lpq = gp.log2(gp.mpfr(str(ratio))) * gp.mpfr(_log(2))      # mpfr log
-            #    lpq = ratio.log10() * Decimal(_log(10))    # decimal log
-               m = _floor((n + 1) * p)         # Mode of the distribution
-               h1 = gp.mpfr(str(m + 1)); h2 = gp.mpfr(str(n - m + 1))
-               h = gp.lgamma(h1)[0] + gp.lgamma(h2)[0]
-               setup_complete = True           # Only needs to be done once
-           v *= alpha / (a / us * us + b)
-           a1 = gp.log2(gp.mpfr(str(v))) * gp.mpfr(_log(2))       # mpfr log
-        #    a1 = v.log10() * Decimal(_log(10))     # decimal log
-           a2 = gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))
-        #    if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
-           if a1 <= a2 + (k - m) * lpq:
-               print("time taken : ", time.time() - start)
-               return k
+            # Acceptance-rejection test.
+            # Note, the original paper errorneously omits the call to log(v)
+            # when comparing to the log of the rescaled binomial distribution.
+            if not setup_complete:
+                alpha = gp.mul(gp.add(gp.mpfr('2.83'), gp.div(gp.mpfr('5.1'), b)), gp.mpfr(spq))
+                ratio = p / (1 - p)
+                lpq = gp.log2(gp.mpfr(str(ratio))) * gp.mpfr(_log(2)) 
+                m = _floor((n + 1) * p)         # Mode of the distribution
+                h1 = gp.mpfr(str(m + 1)); h2 = gp.mpfr(str(n - m + 1))
+                h = gp.lgamma(h1)[0] + gp.lgamma(h2)[0]
+                setup_complete = True           # Only needs to be done once
+            v *= alpha / (a / (us * us) + b)
+            logv = gp.log2(gp.mpfr(str(v))) * gp.mpfr(_log(2))       # mpfr log
+            #    a1 = v.log10() * Decimal(_log(10))     # decimal log
+            h_log = gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))
+            #    if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
+            if logv <= h_log + (k - m) * lpq:
+                print("time taken : ", time.time() - start)
+                return k
 
 
 if __name__ == '__main__':
     context = Context(prec=3000)
     setcontext(context)
     p = Decimal(1)
-    for i in range(5):
+    for i in range(50):
         p /= 2
-    N = Decimal(2**7)
+    N = Decimal(2**200)
+    N = Decimal('316912650057057350374175801344')
+    p = Decimal('2.524354896707237777317531408904915934954260592348873615264892578125e-29')
+    print(N,p)
     print(vanbinomialvariate(N,p))
-    # print(mpbinomial(N,p))
+    print(mpbinomial(N,p))

@@ -8,6 +8,7 @@ import time
 import argparse
 import cProfile
 from mprandom import mpbinomial
+from mprandom import vanbinomialvariate as vanbinomial
 
 gp.get_context().precision=20000
 
@@ -28,12 +29,14 @@ def isSAT(dnfclause, sol):
 
 def ComputeNumSamples(t, p, thresh, m, delta, method):
 
-    print(f"sample n : {t}, p : {p}")
+    print("sample n : {0}, p : {1}".format(t, str(p)))
 
     if method == 1:
         # vanilla version
         try:
-            N = np.random.binomial(t, p)
+            # N = np.random.binomial(t, p)
+            N = vanbinomial(t,p)
+            N = int(N)
         except OverflowError:
             print("SAMPLING FAILURE!")
             exit("SAMPLING FAILURE!")
@@ -202,6 +205,8 @@ def GenerateSamples(N, dnfClause, delta, m, nVars, thresh):
     # tmpFile.close()
 
     if False: #nVars - len(dnfClause) - 2 * math.log2(1+thresh) <= math.log2(6*m/delta):
+    
+        print("here")
 
         if N > 0 :
             k = 0
@@ -218,7 +223,7 @@ def GenerateSamples(N, dnfClause, delta, m, nVars, thresh):
             # s = getSolutionFromQuickSampler("tmpClause.cnf", lmt)
             
     else:
-        
+        print("there")
         for j in range(N):
             sampSet.append(constructLazySample(dnfClause))
 
@@ -268,6 +273,8 @@ def dnfstream():
     # parameters / initialization
     eps = args.eps
     delta = args.delta
+    if args.samp == 1:
+        delta *= 2
     m = int(nClause)
     n = int(nVars)
     thresh = max(12 * math.log(24/delta) / eps**2, 6*(math.log(6/delta) + math.log(m)))
