@@ -12,6 +12,7 @@ from mprandom import vanbinomialvariate as vanbinomial
 
 gp.get_context().precision=20000
 
+npfile = "check-np.txt"
 
 def isSAT(dnfclause, sol):    
     tmpRand = np.random.uniform(0, 1, max(len(dnfclause), len(sol)))     
@@ -262,6 +263,8 @@ def dnfstream():
 
     initLine = lines[0].strip().split()
 
+    npf = open(npfile, "w")
+    npf.write("m: "+ initLine[3])
 
     if initLine[0] == "p":
         nVars = initLine[2]
@@ -319,6 +322,7 @@ def dnfstream():
         print(f"p: {p} | thresh : {int(thresh)} | bucket : {len(solset)}")
 
         N_i = ComputeNumSamples(t, p, thresh, m, delta, sampMethod)
+        npf.write(" np: " + str(t*p) + "n: " + str(t) + " p: " + str(p) + " k: " + str(N_i) + '\n')
 
         Npast = N_i
         while N_i + len(solset) > thresh:
@@ -339,6 +343,7 @@ def dnfstream():
         seed += 1
         
     print(1/p)
+    npf.close()
 
     modelCount = int(len(solset)/p)
     
