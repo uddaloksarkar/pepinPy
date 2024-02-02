@@ -461,13 +461,15 @@ def StirlBinom(n=1, p=0.5):
                 lpq = gp.log2(gp.mpfr(str(ratio))) * gp.mpfr(_log(2)) 
                 m = _floor((n + 1) * p)         # Mode of the distribution
                 h1 = gp.mpfr(str(m + 1)); h2 = gp.mpfr(str(n - m + 1))
-                h = gp.lgamma(h1)[0] + gp.lgamma(h2)[0]
+                h = gp.log(gp.sqrt(2 * gp.const_pi())) + gp.mul((h1 + 1/2),gp.log(h1)) - gp.mpfr(h1) + gp.log(gp.sqrt(2 * gp.const_pi())) + gp.mul((h2 + 1/2),gp.log(h2)) - gp.mpfr(h2)
+                #h = gp.lgamma(h1)[0] + gp.lgamma(h2)[0]
                 setup_complete = True           # Only needs to be done once
             v *= alpha / (a / (us * us) + b)
             logv = gp.log2(gp.mpfr(str(v))) * gp.mpfr(_log(2))       # mpfr log
-            #    a1 = v.log10() * Decimal(_log(10))     # decimal log
-            h_log = gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))
-            #    if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
+            strilk = gp.log(gp.sqrt(2 * gp.const_pi())) + gp.mul((gp.mpfr(str(k)) + 1/2),gp.log(gp.mpfr(str(k)))) - gp.mpfr(gp.mpfr(str(k)))
+            strilnk1 = gp.log(gp.sqrt(2 * gp.const_pi())) + gp.mul((gp.mpfr(str(n)) - gp.mpfr(str(k)) + 3/2),gp.log(gp.mpfr(str(n)) - gp.mpfr(str(k)) + 1)) - gp.mpfr(gp.mpfr(str(n)) - gp.mpfr(str(k)) + 1)
+            h_log = gp.sub(h, gp.add(strilk, strilnk1))
+            # h_log = gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))
             if logv <= h_log + (k - m) * lpq:
                 print("time taken : ", time.time() - start)
                 return k
