@@ -19,54 +19,6 @@ def mpuniform(precision=30):
     univariate = univariate / Decimal(10**precision)
     return univariate
 
-def mpexpovariate(precision=30):
-    """ Improved Von Neumann's algorithm by Charles F. F. Karney 
-    """
-    getcontext().prec = precision
-    l = 0
-    while True:
-        x = mpuniform(precision)
-        if x > 0.5:
-            l += 1
-            continue 
-        n = 0; u = x
-        while u > (u := mpuniform(precision)):
-            n += 1
-        if n % 2 == 1:
-            l += 1
-            continue
-        else:
-            return Decimal(0.5 * l) + x
-
-def _half_exp_bernoulli(precision = 30):
-    """ Exact Bernoulli variate with parameter 1 / sqrt(e)
-    """
-    if not (u1 := mpuniform(precision)) < 0.5: return True
-    while True:
-        if not (u2 := mpuniform(precision)) > u1: return False
-        if not (u1 := mpuniform(precision)) > u2: return True 
-
-def _general_exp_variate(x, param, precision = 30):
-    """generalization of Von Neumann Trick
-    """
-    y = x; n= 0
-    while True:
-        z = mpuniform(precision)
-        r = mpuniform(precision)
-        if z > y or r > param:
-            break
-        y = z
-        n += 1
-    return (n % 2 == 0)
-
-    # if not (u1 := mpuniform()) < x: return True
-    # while True:
-    #     if not (u2 := mpuniform()) > u1: return False
-    #     if not (u1 := mpuniform()) > u2: return True 
-
-
-
-def mpnormalvariate(mu=0.0, sigma=1.0, precision=30):
     """multi precision Normal distribution.
 
         uses Charles F. F. Karney method
@@ -125,179 +77,46 @@ def mpnormalvariate(mu=0.0, sigma=1.0, precision=30):
 #         k0  -= 1
 #     return gl
 
-def poissonvariate(lambd = 10):
+def lanczpoisson(lambd = 10):
     """PTRS
     """
+    start = time.time()
+    lambd = gp.mpfr(str(lambd))
     if lambd < 10 :
-        exlam = _exp(-lambd)
+        exlam = gp.exp(-lambd)
         k = 0
-        prod = 1
+        prod = gp.mpfr(1)
         while True:
-            U = random()
+            U = gp.mpfr(str(mpuniform()))
             prod *= U
             if prod > exlam:
                 k += 1
             else:
+                print("lanczpois time taken : ", time.time() - start)
                 return k
     elif lambd >= 10 :
-        lnlam = _log(lambd)
-        b = 0.931 + 2.53 * _sqrt(lambd)
+        lnlam = gp.log(lambd)
+        b = 0.931 + 2.53 * gp.sqrt(lambd)
         a = - 0.059 + 0.02483 * b
         vr = 0.9277 - 3.6224 / (b - 2)
         invalpha = 1.1239 + 1.1328 / (b - 3.4)
         
         while True:
-            U, V = random() - 0.5, random()
+            U, V = gp.mpfr(str(mpuniform())) - 0.5, gp.mpfr(str(mpuniform()))
             us = 0.5 - _fabs(U)
             k = _floor(( 2 * a / us + b) * U + lambd + 0.43)
-            if (us >= 0.07) and (V <= vr):
-                return k
+            # if (us >= 0.07) and (V <= vr):
+            #     print("lanczpois time taken : ", time.time() - start)
+            #     return k
             if (k <= 0) or (us < 0.013 and V > us):
                 continue
-            if (_log(V) + _log(invalpha) - _log(a / us**2 + b)) <= (-lambd + k * lnlam - _lgamma(k)):
+            if (gp.log(V) + gp.log(invalpha) - gp.log(a / us**2 + b)) <= (-lambd + k * lnlam - gp.lgamma(k)[0]):
+                print("lanczpois time taken : ", time.time() - start)
                 return k 
     
-def mpbinomial(n = 10, p = 0.5, precision = 30, err = 0.01):
-    """multi precision Binomial distribution
-       it takes a parameter error as input for error allowance
-    """
-    start = time.time()
-    precision = 4000 #max(precision, int(_log10(n)))
-    context = Context(prec=precision)
-    reverse = False
-    if p == 1:
-        return n
-    elif p == 0:
-        return 0
-    if p > 0.5:
-        p = 1 - p
-        reverse = True
-    p = context.create_decimal(str(p))
-    err = context.create_decimal(str(err))
-    if n > (1-2*p)**2 / (err**2 * p * (1-p)):
-#        print("normal")
-        z = mpnormalvariate(precision = precision)
-        print("time taken", time.time() - start)
-        if not reverse:
-            return int(context.fma(context.sqrt(n*p*(1-p)), z, n * p))
-        else:
-            return n - int(context.fma(context.sqrt(n*p*(1-p)), z, n * p))
-    if n < err / (2 * p**2):
-#        print("poisson")
-        z = poissonvariate(lambd = float(n * p))
-        print("time taken", time.time() - start)
-        if not reverse:
-            return z
-        else:
-            return n - z
-    else:
-#        print("vanilla")
-        z = binomialvariate(n = n, p = float(p))
-        print("time taken", time.time() - start)
-        if not reverse:
-            return z
-        else:
-            return n - z
-        
-def mppoisson(lambd = 100, precision = 30, err = 0.01):
-    """multi precision Poisson distribution
-       it takes a parameter error as input for error allowance
-    """
-    precision = max(precision, int(_log10(lambd)))
-    context = Context(prec=precision)
-    err = context.create_decimal(str(err))
-    if lambd > 12 / (err**2):
-        z = mpnormalvariate(precision = precision)
-        return int(context.fma(context.sqrt(lambd), z, lambd))
-    else:
-        z = poissonvariate(lambd=lambd)
-        return z            
             
-def binomialvariate(n=1, p=0.5):
-    """Binomial random variable.
 
-    Gives the number of successes for *n* independent trials
-    with the probability of success in each trial being *p*:
-
-        sum(random() < p for i in range(n))
-
-    Returns an integer in the range:   0 <= X <= n
-
-    """
-    # Error check inputs and handle edge cases
-    if n < 0:
-        raise ValueError("n must be non-negative")
-    if p <= 0.0 or p >= 1.0:
-        if p == 0.0:
-            return 0
-        if p == 1.0:
-            return n
-        raise ValueError("p must be in the range 0.0 <= p <= 1.0")
-
-    # Fast path for a common case
-    if n == 1:
-        return _index(random() < p)
-
-    # Exploit symmetry to establish:  p <= 0.5
-    if p > 0.5:
-        return n - binomialvariate(n, 1.0 - p)
-
-    if n * p < 10.0:
-        # BG: Geometric method by Devroye with running time of O(np).
-        # https://dl.acm.org/doi/pdf/10.1145/42372.42381
-        x = y = 0
-        c = _log2(1.0 - p)
-        if not c:
-            return x
-        while True:
-            y += _floor(_log2(random()) / c) + 1
-            if y > n:
-                return x
-            x += 1
-
-    # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
-    # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
-    assert n*p >= 10.0 and p <= 0.5
-    setup_complete = False
-
-    spq = Decimal(_sqrt(n * p * (1.0 - p)))  # Standard deviation of the distribution
-    b = Decimal('1.15') + Decimal('2.53') * spq
-    a = Decimal('-0.0873') + Decimal('0.0248') * b + Decimal(0.01 * p)
-    c = Decimal(n * p + 0.5)
-    vr = Decimal('0.92') - Decimal('4.2') / b
-
-    context = decimal.Context(prec=100)
-    while True:
-
-        u = mpuniform() #random()
-        u -= Decimal('0.5')
-        us = Decimal('0.5') - Decimal(_fabs(u))
-        k = _floor((Decimal('2.0') * a / us + b) * u + c)
-        if k < 0 or k > n:
-            continue
-
-        # The early-out "squeeze" test substantially reduces
-        # the number of acceptance condition evaluations.
-        v = mpuniform()
-        if us >= 0.07 and v <= vr:
-            # print("before")
-            return k
-
-        # Acceptance-rejection test.
-        # Note, the original paper errorneously omits the call to log(v)
-        # when comparing to the log of the rescaled binomial distribution.
-        if not setup_complete:
-            alpha = (Decimal(2.83) + Decimal(5.1) / b) * spq
-            lpq = Decimal(_log(p / (1.0 - p)))
-            m = _floor((n + 1) * p)         # Mode of the distribution
-            h = Decimal(_lgamma(m + 1) + _lgamma(n - m + 1))
-            setup_complete = True           # Only needs to be done once
-        v *= alpha / (a / (us * us) + b)
-        if _log(v) <= h - Decimal(_lgamma(k + 1) - _lgamma(n - k + 1)) + (k - m) * lpq:
-            # print("after")
-            return k
-
-def vanbinomialvariate(n=1, p=0.5):
+def lanczbinom(n=1, p=0.5):
         """Binomial random variable.
 
         Gives the number of successes for *n* independent trials
@@ -324,27 +143,10 @@ def vanbinomialvariate(n=1, p=0.5):
 
         # Exploit symmetry to establish:  p <= 0.5
         if p > 0.5:
-            return n - vanbinomialvariate(n, 1.0 - p)
-
-        if n * p < 10.0:
-            # BG: Geometric method by Devroye with running time of O(np).
-            # https://dl.acm.org/doi/pdf/10.1145/42372.42381
-            x = y = 0
-            c = gp.log2(1 - p)
-            f = open("file.txt", "a")
-            f.write(str(n*p)+ " n: " + str(n) + " p: " + str(p) + "\n")
-            if not c:
-                return x
-            while True: 
-                y += int(gp.mpfr(str(_log2(random()))) / c) + 1
-                if y > n:
-                    f.write("y: "+ str(y) + "x: "+ str(x) + "\n")
-                    return x
-                x += 1
+            return n - lanczbinom(n, 1.0 - p)
 
         # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
         # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
-        assert n*p >= 10.0 and p <= 0.5
         setup_complete = False
 
         spq = gp.sqrt(gp.mul(gp.mul(n, p), (1 - p)))  # Standard deviation of the distribution
@@ -367,9 +169,9 @@ def vanbinomialvariate(n=1, p=0.5):
             # The early-out "squeeze" test substantially reduces
             # the number of acceptance condition evaluations.
             v = gp.mpfr(random())
-            if us >= 0.07 and v <= vr:
-                print("vanbinomialvariate time taken : ", time.time() - start)
-                return k
+            # if us >= 0.07 and v <= vr:
+            #     print("LanczBinom time taken : ", time.time() - start)
+            #     return k
             
             #    print(f"u : {u}, us : {us}")
 
@@ -390,11 +192,11 @@ def vanbinomialvariate(n=1, p=0.5):
             h_log = gp.sub(h, gp.add(gp.lgamma(gp.mpfr(str(k + 1)))[0], gp.lgamma(gp.mpfr(str(n - k + 1)))[0]))
             #    if _log(v) <= h - _lgamma(k + 1) - _lgamma(n - k + 1) + (k - m) * lpq:
             if logv <= h_log + (k - m) * lpq:
-                print("vanbinomialvariate time taken : ", time.time() - start)
+                print("LanczBinom time taken : ", time.time() - start)
                 return k
 
 
-def StirlBinom(n=1, p=0.5):
+def stirlbinom(n=1, p=0.5):
         """Binomial random variable.
 
         Gives the number of successes for *n* independent trials
@@ -421,7 +223,7 @@ def StirlBinom(n=1, p=0.5):
 
         # Exploit symmetry to establish:  p <= 0.5
         if p > 0.5:
-            return n - vanbinomialvariate(n, 1.0 - p)
+            return n - stirlbinom(n, 1.0 - p)
         
         # BTRS: Transformed rejection with squeeze method by Wolfgang Hörmann
         # https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.47.8407&rep=rep1&type=pdf
@@ -448,9 +250,9 @@ def StirlBinom(n=1, p=0.5):
             # The early-out "squeeze" test substantially reduces
             # the number of acceptance condition evaluations.
             v = gp.mpfr(random())
-            if us >= 0.07 and v <= vr:
-                print("StirlBinom time taken : ", time.time() - start)
-                return k
+            # if us >= 0.07 and v <= vr:
+            #     print("StirlBinom time taken : ", time.time() - start)
+            #     return k
             
             #    print(f"u : {u}, us : {us}")
 
@@ -477,7 +279,7 @@ def StirlBinom(n=1, p=0.5):
                 return k
 
 
-def BernBinom(n=1, p=0.5):
+def bernbinom(n=1, p=0.5):
         """Binomial random variable.
 
         Gives the number of successes for *n* independent trials
@@ -498,17 +300,129 @@ def BernBinom(n=1, p=0.5):
             return 0
 
 
+def binomialvariate(n=1, p=0.5):
+
+    zeta = 2 * 10**(-10)
+    
+    sampler = ''
+
+    if n*p < _sqrt(zeta):
+        start = time.time()
+        k = bernbinom(n,p)
+        tottime = time.time()-start
+        sampler = 'BernBinom'
+    elif n*p*(1-p) > 4 / zeta:
+        if p < zeta**2/16 :
+            start = time.time()
+            k = lanczpoisson(n*p)
+            tottime = time.time()-start
+            sampler = 'LanczPois'
+        else:
+            start = time.time()
+            k = stirlbinom(n, p)
+            tottime = time.time()-start
+            sampler = 'StirlBinom'
+    else:
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        sampler = 'LanczBinom'
+
+    print(sampler, ' ', tottime, ' ', k)
+
+    return sampler + ' ' + str(tottime) + ' \n'# + str(k)
+
+
+def testbinom(n=1, p=0.5):
+
+    zeta = 2 * 10**(-10)
+    
+    sampler = ''
+    returnstr = ''
+    minerr = 1
+    if n*p < 1:
+        start = time.time()
+        k = bernbinom(n,p)
+        tottime = time.time()-start
+        err = n**2 * p**2
+        if err < minerr: 
+            sampler = 'bernbinom'
+            minerr = err
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        start = time.time()
+        k = stirlbinom(n,p)
+        tottime = time.time()-start
+        err = 4*(n+2)**2 * p / ((n+1)*(1-p))
+        if err < minerr: 
+            sampler = 'stirlbinom'
+            minerr = err
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        start = time.time()
+        k = lanczpoisson(n*p)
+        tottime = time.time()-start
+        err = 2 * n * p**2 + 2 * n * p
+        if err < minerr: 
+            sampler = 'poisbinom'
+            minerr = err
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        err = 30 * zeta
+        if err < minerr: 
+            sampler = 'lanczbinom'
+            minerr = err
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += ' ' + sampler + '\n'
+    else:
+        returnstr += '- -'
+        start = time.time()
+        k = stirlbinom(n,p)
+        tottime = time.time()-start
+        err = 4/ (n * p *(1-p))
+        if err < minerr: 
+            sampler = 'stirlbinom'
+            minerr = err
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        start = time.time()
+        k = lanczpoisson(n*p)
+        tottime = time.time()-start
+        err = 2 * n * p**2 + 2 /( n * p)
+        if err < minerr: 
+            sampler = 'poisbinom'
+            minerr = err
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        if err < minerr: 
+            sampler = 'lanczbinom'
+            minerr = err
+        err = 30 * zeta
+        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += ' ' + sampler + '\n'
+
+    return returnstr
+
 if __name__ == '__main__':
     context = Context(prec=3000)
     setcontext(context)
     p = Decimal(1)
     for i in range(50):
         p /= 2
-    N = Decimal(2**200)
-    N = Decimal('316912650057057350374175801344')
-    p = Decimal('2.524354896707237777317531408904915934954260592348873615264892578125e-29')
-    print(N,p)
-    print(vanbinomialvariate(N,p))
-    # print(mpbinomial(N,p))
-    print(BernBinom(N,p))
-    print(StirlBinom(N,p))
+    # N = Decimal(2**2000)
+    # N = Decimal('31691265098798780809809807057057350374175801344')
+    # p = Decimal('2.524354896707237777317531408904915934954260592348873615264892578125e-29')
+    # print(N*p)
+    # print(lanczbinom(N,p))
+    # print(bernbinom(N,p))
+    # print(stirlbinom(N,p))
+    # print(lanczpoisson(N*p))
+    ncalls = 100
+    f = open("results", "w")
+    for i in range(0, 5000, 500):
+        N = 2**i
+        p = Decimal(1)
+        for j in range(0, 10000, 500):
+            p /= 2
+            f.writelines(testbinom(N,p))
