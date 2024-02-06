@@ -6,6 +6,9 @@ from math import log2 as _log2, log10 as _log10, fabs as _fabs, lgamma as _lgamm
 from math import sqrt as _sqrt, exp as _exp
 import gmpy2 as gp
 import time
+import matplotlib.pyplot as plt
+log = lambda t: gp.log10(gp.mpfr(str(t)))
+    
 
 #----------------- Arbitrary Precision Random number generator -----------
 
@@ -333,7 +336,7 @@ def binomialvariate(n=1, p=0.5):
     return sampler + ' ' + str(tottime) + ' \n'# + str(k)
 
 
-def testbinom(n=1, p=0.5):
+def testbinom2(n=1, p=0.5):
 
     zeta = 2 * 10**(-10)
     
@@ -341,14 +344,17 @@ def testbinom(n=1, p=0.5):
     returnstr = ''
     minerr = 1
     if n*p < 1:
+
         start = time.time()
         k = bernbinom(n,p)
         tottime = time.time()-start
         err = n**2 * p**2
+        assert err <=1
         if err < minerr: 
             sampler = 'bernbinom'
             minerr = err
-        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
+        
         start = time.time()
         k = stirlbinom(n,p)
         tottime = time.time()-start
@@ -356,73 +362,289 @@ def testbinom(n=1, p=0.5):
         if err < minerr: 
             sampler = 'stirlbinom'
             minerr = err
-        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
+        
         start = time.time()
         k = lanczpoisson(n*p)
         tottime = time.time()-start
         err = 2 * n * p**2 + 2 * n * p
+        assert err <=1
         if err < minerr: 
             sampler = 'poisbinom'
             minerr = err
-        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
+        
         start = time.time()
         k = lanczbinom(n,p)
         tottime = time.time()-start
         err = 30 * zeta
+        assert err <=1
         if err < minerr: 
             sampler = 'lanczbinom'
             minerr = err
-        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
         returnstr += ' ' + sampler + '\n'
+    
     else:
-        returnstr += '- -'
+        
+        returnstr += '0 0 '
+        
         start = time.time()
         k = stirlbinom(n,p)
         tottime = time.time()-start
         err = 4/ (n * p *(1-p))
+        assert err <=1
         if err < minerr: 
             sampler = 'stirlbinom'
             minerr = err
-        returnstr += str(tottime) + ' ' + str(err) + ' '
-        start = time.time()
-        k = lanczpoisson(n*p)
-        tottime = time.time()-start
-        err = 2 * n * p**2 + 2 /( n * p)
-        if err < minerr: 
-            sampler = 'poisbinom'
-            minerr = err
-        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
+        
+        if n*p**2 > 1:
+            returnstr += '0 0 '
+        else:
+            start = time.time()
+            k = lanczpoisson(n*p)
+            tottime = time.time()-start
+            err = 2 * n * p**2 + 2 /( n * p)
+            print(n*p**2, err)
+            assert err <=1
+            if err < minerr: 
+                sampler = 'poisbinom'
+                minerr = err
+            returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
+
         start = time.time()
         k = lanczbinom(n,p)
         tottime = time.time()-start
+        assert err <=1
         if err < minerr: 
             sampler = 'lanczbinom'
             minerr = err
         err = 30 * zeta
-        returnstr += str(tottime) + ' ' + str(err) + ' '
+        returnstr += str(tottime) + ' ' + str(gp.log10(gp.mpfr(str(err)))) + ' '
         returnstr += ' ' + sampler + '\n'
 
     return returnstr
 
+def testbinom(n=1, p=0.5, reg = 'r1'):
+
+    zeta = 2 * 10**(-10)
+
+    times = []
+    errs = []
+
+    if reg == 'r1':
+
+        start = time.time()
+        k = bernbinom(n,p)
+        tottime = time.time()-start
+        err = n**2 * p**2
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = stirlbinom(n,p)
+        tottime = time.time()-start
+        err = 4*(n+2)**2 * p / ((n+1)*(1-p))
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczpoisson(n*p)
+        tottime = time.time()-start
+        err = 2 * n * p**2 + 2 * n * p
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        err = 30 * zeta
+        times.append(tottime)
+        errs.append(err)
+
+        return list(map(log,errs)), times
+
+
+    elif reg == 'r2':
+
+        start = time.time()
+        k = stirlbinom(n,p)
+        tottime = time.time()-start
+        err = 4 / (n*p*(1-p))
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        err = 30 * zeta
+        times.append(tottime)
+        errs.append(err)
+
+        return list(map(log,errs)), times
+    
+    elif reg == 'r3':
+
+        start = time.time()
+        k = stirlbinom(n,p)
+        tottime = time.time()-start
+        err = 4 / (n * p *(1-p))
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczpoisson(n*p)
+        tottime = time.time()-start
+        err = 2 * n * p**2 + 2 / (n * p)
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        err = 30 * zeta
+        times.append(tottime)
+        errs.append(err)
+
+        return list(map(log,errs)), times 
+            
+    elif reg == 'r4':
+
+        start = time.time()
+        k = stirlbinom(n,p)
+        tottime = time.time()-start
+        err = 4 / (n*p*(1-p))
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczpoisson(n*p)
+        tottime = time.time()-start
+        err = 2 * n * p**2 + 2 / (n * p)
+        times.append(tottime)
+        errs.append(err)
+
+        start = time.time()
+        k = lanczbinom(n,p)
+        tottime = time.time()-start
+        err = 30 * zeta
+        times.append(tottime)
+        errs.append(err)
+
+        return list(map(log,errs)), times
+
+   
+
 if __name__ == '__main__':
     context = Context(prec=3000)
     setcontext(context)
-    p = Decimal(1)
-    for i in range(50):
-        p /= 2
-    # N = Decimal(2**2000)
-    # N = Decimal('31691265098798780809809807057057350374175801344')
-    # p = Decimal('2.524354896707237777317531408904915934954260592348873615264892578125e-29')
-    # print(N*p)
-    # print(lanczbinom(N,p))
-    # print(bernbinom(N,p))
-    # print(stirlbinom(N,p))
-    # print(lanczpoisson(N*p))
+    zeta = 2 * 10**(-10)    
+
     ncalls = 100
     f = open("results", "w")
-    for i in range(0, 5000, 500):
+    r1_error = {} #bern
+    r2_error = {} #stirl
+    r3_error = {} #pois
+    r4_error = {} #lancz
+    
+    r1_time = {} #bern
+    r2_time = {} #stirl
+    r3_time = {} #pois
+    r4_time = {} #lancz
+    
+    for i in range(100, 5000, 100):
         N = 2**i
-        p = Decimal(1)
+        p = Decimal(0.5)
         for j in range(0, 10000, 500):
-            p /= 2
-            f.writelines(testbinom(N,p))
+            p /= 2**j
+            
+            if N*p < _sqrt(zeta):
+                r1_error[log(N*p)], r1_time[log(N*p)] = testbinom(N,p,'r1')
+            elif N*p*(1-p) > 4 / zeta:
+                if p > zeta**2/16 :
+                    r2_error[log(N*p)], r2_time[log(N*p)] = testbinom(N,p,'r2')
+                else:
+                    r3_error[log(N*p)], r3_time[log(N*p)] = testbinom(N,p,'r3')
+            else:
+                r4_error[log(N*p)], r4_time[log(N*p)] = testbinom(N,p,'r4')
+
+
+    fig, axs = plt.subplots(4, 1)
+
+    x, y0, y1, y2, y3 = [], [], [], [], []
+    for item, values in r1_error.items():
+        x.append(item)
+        y0.append(values[0])
+        y1.append(values[1])
+        y2.append(values[2])
+        y3.append(values[3])        
+    axs[0].plot(x,y0, label = 'bernbinom')
+    axs[0].plot(x,y1, label = 'stirlbinom')
+    axs[0].plot(x,y2, label = 'poisbinom')
+    axs[0].plot(x,y3, label = 'lanczbinom')
+    axs[0].set_title('Error in Region - 1')
+    axs[0].set(xlabel='np values in $\log_{10}$', ylabel ='Error in $\log_{10}$')
+    axs[0].legend()
+    axs[0].grid(True)
+
+    x, y0, y1, y2, y3 = [], [], [], [], []
+    for item, values in r2_error.items():
+        x.append(item)
+        y0.append(values[0])
+        y1.append(values[1])
+    axs[1].plot(x,y0, label = 'stirlbinom')
+    axs[1].plot(x,y1, label = 'lanczbinom')
+    axs[1].set_title('Error in Region - 1')
+    axs[1].set(xlabel='np values in $\log_{10}$', ylabel ='Error in $\log_{10}$')
+    axs[1].legend()
+    axs[1].grid(True)
+    
+    x, y0, y1, y2, y3 = [], [], [], [], []
+    for item, values in r3_error.items():
+        x.append(item)
+        y0.append(values[0])
+        y1.append(values[1])
+        y2.append(values[2])
+    axs[2].plot(x,y0, label = 'stirlbinom')
+    axs[2].plot(x,y1, label = 'poisbinom')
+    axs[2].plot(x,y2, label = 'lanczbinom')
+    axs[2].set_title('Error in Region - 3')
+    axs[2].set(xlabel='np values in $\log_{10}$', ylabel ='Error in $\log_{10}$')
+    axs[2].legend()
+    axs[2].grid(True)
+    
+    x, y0, y1, y2, y3 = [], [], [], [], []
+    for item, values in r4_error.items():
+        x.append(item)
+        y0.append(values[0])
+        y1.append(values[1])
+        y2.append(values[2])
+    axs[3].plot(x,y0, label = 'stirlbinom')
+    axs[3].plot(x,y1, label = 'poisbinom')
+    axs[3].plot(x,y2, label = 'lanczbinom')
+    axs[3].set_title('Error in Region - 4')
+    axs[3].set(xlabel='np values in $\log_{10}$', ylabel ='Error in $\log_{10}$')
+    axs[3].legend()
+    axs[3].grid(True)
+    
+
+    # x, y0, y1, y2, y3 = [], [], [], [], []
+    # for item, values in r1_time.items():
+    #     print(values)
+    #     x.append(item)
+    #     y0.append(values[0])
+    #     y1.append(values[1])
+    #     y2.append(values[2])
+    #     y3.append(values[3])        
+    # axs[0,1].scatter(x,y0, label = 'bernbinom')
+    # axs[0,1].scatter(x,y1, label = 'stirlbinom')
+    # axs[0,1].scatter(x,y2, label = 'poisbinom')
+    # axs[0,1].scatter(x,y3, label = 'lanczbinom')
+    # axs[0,1].set(xlabel='np values in $\log_{10}$', ylabel ='Time in $\log_{10}$')
+    # axs[0,1].set_title('Time in Region - 1')
+    # axs[0,1].legend()
+    # axs[0,1].grid(True)
+
+
+    plt.show()
