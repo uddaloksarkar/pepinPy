@@ -12,7 +12,6 @@ from mprandom import vanbinomialvariate as vanbinomial
 
 gp.get_context().precision=20000
 
-npfile = "check-np.txt"
 
 def isSAT(dnfclause, sol):    
     tmpRand = np.random.uniform(0, 1, max(len(dnfclause), len(sol)))     
@@ -25,17 +24,16 @@ def isSAT(dnfclause, sol):
                 return False
             idx += 1
     return True
-    
 
 
-def ComputeNumSamples(t, p, thresh, m, delta, method):
+def ComputeNumSamples(t, p, thresh, m, delta, method, verbose):
 
-    print("sample n : {0}, p : {1}".format(t, str(p)))
+    if verbose:
+        print("sample n : {0}, p : {1}".format(t, str(p)))
 
     if method == 1:
         # vanilla version
         try:
-            # N = np.random.binomial(t, p)
             N = vanbinomial(t,p)
             N = int(N)
         except OverflowError:
@@ -51,23 +49,23 @@ def ComputeNumSamples(t, p, thresh, m, delta, method):
 
         if t * p >= thresh2 :
             if t <= thresh1:
-                print("binomial")
+                if verbose:
+                    print("binomial")
                 N = np.random.binomial(int(t), float(p))
             else:
-                print("poisson")
+                if verbose:
+                    print("poisson")
                 N = np.random.poisson(float(t * p))
         else:
-            print("small binomial")
+            if verbose:
+                print("small binomial")
             N = np.random.binomial(1, float(t*p))
 
     elif method == 3:
         # mp version
         N = mpbinomial(int(t), p, err=delta / (6 * m))
 
-    print(f"ni : {N}")
-    
     return N
-
 
 
 def getSolutionFromVanillaSampler(dnfClause, nVars):
@@ -83,156 +81,13 @@ def getSolutionFromVanillaSampler(dnfClause, nVars):
                 sol.append(i)
     return sol
 
-"""
-def getSolutionFromSTS(dnfClauseFile, numSolutions):
-    kValue = 50
-    samplingRounds = int(numSolutions/kValue) + 1
-    outputFile = "tmpSTSoutput.out"
-    cmd = './samplers/STS -k='+str(kValue)+' -nsamples='+str(samplingRounds)+' '+str(dnfClauseFile)
-    cmd += ' > '+str(outputFile)
-    os.system(cmd)
-
-    with open(outputFile, 'r') as f:
-        lines = f.readlines()
-
-    solList = []
-    shouldStart = False
-    for j in range(len(lines)):
-        if(lines[j].strip() == 'Outputting samples:' or lines[j].strip() == 'start'):
-            shouldStart = True
-            continue
-        if (lines[j].strip().startswith('Log') or lines[j].strip() == 'end'):
-            shouldStart = False
-        if (shouldStart):
-            i = 0
-            sol = []
-            # valutions are 0 and 1 and in the same order as c ind.
-            for x in list(lines[j].strip()):
-                if (x == '0'):
-                    sol.append(-1*indVarList[i])
-                else:
-                    sol.append(indVarList[i])
-                i += 1
-            solList.append(sol)
-
-    solreturnList = solList
-    if len(solList) > numSolutions:
-        solreturnList = random.sample(solList, numSolutions)
-    elif len(solList) < numSolutions:
-        print(len(solList))
-        print("STS Did not find required number of solutions")
-        sys.exit(1)
-
-    os.unlink(outputFile)
-    return solreturnList
-
-
-
-def getSolutionFromQuickSampler(dnfClauseFile, numSolutions):
-    cmd = (
-        "./samplers/quicksampler -n "
-        + str(numSolutions * 5)
-        + " "
-        + str(dnfClauseFile)
-        )
-    print(cmd)
-    os.system(cmd)
-    cmd = "./samplers/z3 " + str(dnfClauseFile) #+ " > /dev/null 2>&1"
-    print(cmd)
-    os.system(cmd)
-    i = 0
-    if numSolutions > 1:
-        i = 0
-
-    f = open(dnfClauseFile + ".samples", "r")
-    lines = f.readlines()
-    f.close()
-    f = open(dnfClauseFile + ".samples.valid", "r")
-    validLines = f.readlines()
-    f.close()
-    solList = []
-    for j in range(len(lines)):
-        # if validLines[j].strip() == "0":
-        #     continue
-        fields = lines[j].strip().split(":")
-        solList.append(fields[1])
-        # sol = []
-        # i = 0
-        # for x in list(fields[1].strip()):
-        #     if x == "0":
-        #         sol.append(-1*indVarList[i])
-        #     else:
-        #         sol.append(indVarList[i])
-        #     i += 1
-        # solList.append(sol)
-
-    solreturnList = solList
-    if len(solList) > numSolutions:
-        solreturnList = random.sample(solList, numSolutions)
-    elif len(solreturnList) < numSolutions:
-        print("Did not find required number of solutions")
-        exit(1)
-
-    os.unlink(dnfClauseFile+'.samples')
-    os.unlink(dnfClauseFile+'.samples.valid')
-
-    return solreturnList
-"""
-
-def constructLazySample(dnfClause):
-    # sol = []
-    # for lit in dnfClause:
-    #     sol.append(lit)
-    return dnfClause
-
 
 def GenerateSamples(N, dnfClause, delta, m, nVars, thresh):
     sampSet = []
-
-    # tmpFile = open("tmpClause.cnf", 'w')
-    # tmpFile.write('p cnf ' + str(nVars) + ' ' + str(len(dnfClause)) + '\n')
-    # varstr = 'c ind '
-    # for i in range(1, nVars+1):
-    #     varstr += str(i) + ' '
-    #     if i % 10 == 0 and i < nVars:
-    #         varstr += '0\nc ind '
-    # tmpFile.write(varstr)
-    # tmpFile.write('0\n')
-    # # clauseStr = ''
-    # for lit in dnfClause:
-    #     tmpFile.write(str(lit) + ' 0\n')
-    #     # clauseStr += str(lit) + ' 0\n'
-    # # tmpFile.write(clauseStr)
-    # tmpFile.close()
-
-    if False: #nVars - len(dnfClause) - 2 * math.log2(1+thresh) <= math.log2(6*m/delta):
-    
-        print("here")
-
-        if N > 0 :
-            k = 0
-            lmt = int(N * (math.log(N) + math.log(6/delta) + math.log(m)))
-            for j in range(int(lmt)):
-                s = getSolutionFromVanillaSampler(dnfClause, nVars)
-                if s not in sampSet:
-                    sampSet.append(s)
-                    k += 1
-                if k == N: break
-
-            # s = getSolutionFromSTS("tmpClause.cnf", lmt)
-            
-            # s = getSolutionFromQuickSampler("tmpClause.cnf", lmt)
-            
-    else:
-        print("there")
-        for j in range(N):
-            sampSet.append(constructLazySample(dnfClause))
+    for j in range(N):
+        sampSet.append(dnfClause)
 
     return sampSet
-
-
-
-
 
 def dnfstream():
 
@@ -245,26 +100,26 @@ def dnfstream():
         "--delta", type=float, help="default = 0.1", default=0.1, dest="delta"
     )
     parser.add_argument("--seed", type=int, dest="seed", default=10)
-    parser.add_argument("--samp", type=int, dest="samp", default=1)
+    parser.add_argument("--samp", type=int, dest="samp", default=2)
     parser.add_argument("input", help="input file")
+    parser.add_argument("--dosample", help="do sampling", action="store_true")
+    parser.add_argument("--verbose", help="verbosity", action="store_true")
 
     args = parser.parse_args()
 
     # file handling
-    inputFile = args.input #"test4.dnf" # args.input
+    inputFile = args.input 
     f = open(inputFile, "r")
     lines = f.readlines()
     f.close()
 
     seed = args.seed
     sampMethod = args.samp
+    do_sampling = args.dosample
 
     np.random.seed(seed)
 
     initLine = lines[0].strip().split()
-
-    npf = open(npfile, "w")
-    npf.write("m: "+ initLine[3])
 
     if initLine[0] == "p":
         nVars = initLine[2]
@@ -319,10 +174,10 @@ def dnfstream():
                     solset.remove(sol)
             # p = p / 2
             p = gp.div(p,2)
-        print(f"p: {p} | thresh : {int(thresh)} | bucket : {len(solset)}")
+        if args.verbose:
+            print(f"p: {p} | thresh : {int(thresh)} | bucket : {len(solset)}")
 
-        N_i = ComputeNumSamples(t, p, thresh, m, delta, sampMethod)
-        npf.write(" np: " + str(t*p) + "n: " + str(t) + " p: " + str(p) + " k: " + str(N_i) + '\n')
+        N_i = ComputeNumSamples(t, p, thresh, m, delta, sampMethod, args.verbose)
 
         Npast = N_i
         while N_i + len(solset) > thresh:
@@ -331,9 +186,11 @@ def dnfstream():
                     solset.remove(sol)
             N_i = np.random.binomial(N_i , 1/2)
             p = p / 2
-            print(f"bucket reduced to : {len(solset)}")
+            if args.verbose:
+                print(f"bucket reduced to : {len(solset)}")
 
-        print(f"old ni : {Npast}, new ni: {N_i}")
+        if args.verbose:
+            print(f"old ni : {Npast}, new ni: {N_i}")
 
         sol = GenerateSamples(N_i, currClause, delta, m, n, thresh)
         solset += sol
@@ -341,11 +198,24 @@ def dnfstream():
         if cl == m : break
 
         seed += 1
-        
-    print(1/p)
-    npf.close()
 
     modelCount = int(len(solset)/p)
+
+    if do_sampling:
+        sampled_element = random.choice(solset)
+        tmpRand = np.random.uniform(0, 1, n)     
+        idx = 0
+        for lit in range(1, n+1):
+            if lit in sampled_element:
+                continue
+            else:
+                if tmpRand[idx] > 0.5:
+                    sampled_element.append(-lit)
+                else:
+                    sampled_element.append(lit)
+                idx += 1
+        print("Sampled element:", tuple(sorted(sampled_element, key=abs)))
+        return modelCount, sampled_element
     
     return modelCount
 
@@ -357,9 +227,21 @@ if __name__ == "__main__":
     start_time = time.time()
 
     modelCount = dnfstream()
+    # Handle the two possible return formats:
+    if isinstance(modelCount, tuple):
+        # This covers the case with two outputs
+        countValue, sample = modelCount
+        print("Case with two outputs:", countValue, sample)
+        print("Approx-count : ", int(countValue))
+        print("Approx-count (log) : 2^", (math.log2(int(countValue))))
+        print("Sampled element:", sample)
+    else:
+        # This covers the case with one output
+        print("Approx-count : ", int(modelCount))
+        print("Approx-count (log) : 2^", (math.log2(int(modelCount))))
 
     end_time = time.time()
 
     print("time used by counter (seconds) :", end_time - start_time)
-    print("Approx-count : ", int(modelCount))
-    print("Approx-count (log) : 2^", (math.log2(int(modelCount))))
+    
+    
